@@ -56,6 +56,10 @@ a{ color:inherit; }
 .login-btn{ width:100%; margin-top:6px; background:var(--ac); color:#08210f; border:none; padding:11px; border-radius:7px; font-weight:700; font-size:13.5px; letter-spacing:.02em; }
 .login-btn:hover{ filter:brightness(1.08); }
 .login-error{ color:var(--cf-red); font-size:12px; margin-top:10px; display:none; }
+.login-tabs{ display:flex; gap:8px; margin-bottom:20px; }
+.tab-btn{ flex:1; background:var(--bg-elevated); border:1px solid var(--border); color:var(--text-faint); padding:8px 10px; border-radius:7px; font-size:11.5px; font-weight:600; letter-spacing:.02em; transition:all .15s; }
+.tab-btn.active{ border-color:var(--cf-blue); color:var(--text); }
+.login-btn.teacher{ background:var(--cf-blue); color:#fff; }
 
 .stats-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:22px; }
 .stat-card{ background:var(--bg-panel); border:1px solid var(--border); border-radius:10px; padding:16px 16px 14px; }
@@ -73,7 +77,13 @@ a{ color:inherit; }
 .add-toggle{ background:var(--bg-elevated); border:1px solid var(--border); color:var(--text-dim); padding:7px 13px; border-radius:6px; font-size:12px; transition:all .15s; }
 .add-toggle:hover{ color:var(--text); border-color:var(--cf-blue); }
 
-.add-form{ background:var(--bg-panel); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:14px; display:grid; grid-template-columns:1fr 1fr auto; gap:10px; align-items:end; }
+.add-form{ background:var(--bg-panel); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:14px; display:grid; grid-template-columns:.8fr 1.2fr 1.2fr auto; gap:10px; align-items:end; }
+.group-header{ display:flex; align-items:center; justify-content:space-between; padding:11px 16px; background:var(--bg-elevated); border-bottom:1px solid var(--border); }
+.group-header .g-name{ font-family:var(--font-display); font-weight:600; font-size:12.5px; letter-spacing:.02em; }
+.group-header .g-progress{ font-size:11px; color:var(--text-faint); }
+.lb-remove{ background:transparent; border:1px solid var(--border); color:var(--text-faint); font-size:10px; padding:4px 7px; border-radius:5px; margin-left:8px; }
+.lb-remove:hover{ color:var(--cf-red); border-color:var(--cf-red); }
+.guest-badge{ font-size:11px; color:var(--cf-blue); border:1px solid var(--border); padding:5px 10px; border-radius:6px; }
 .add-form .field{ margin-bottom:0; }
 .add-form button{ background:var(--cf-blue); color:#fff; border:none; padding:10px 16px; border-radius:7px; font-size:12.5px; font-weight:600; height:38px; }
 
@@ -136,12 +146,26 @@ footer.hint{ text-align:center; color:var(--text-faint); font-size:11px; margin-
 
   <div id="loginView" class="login-wrap">
     <div class="login-card">
-      <div class="login-head">Sign in to Tracksheet</div>
-      <div class="login-sub">Enter your student ID and Codeforces handle. Your ID identifies your row — everyone on the team can see who's solved what.</div>
-      <div class="field"><label>Student ID</label><input id="inStudentId" type="text" placeholder="e.g. C253101" autocomplete="off"></div>
-      <div class="field"><label>Full name</label><input id="inName" type="text" placeholder="e.g. Amir Foysal" autocomplete="off"></div>
-      <div class="field"><label>Codeforces handle</label><input id="inHandle" type="text" placeholder="e.g. tourist" autocomplete="off"></div>
-      <button class="login-btn" onclick="handleLogin()">Enter tracksheet</button>
+      <div class="login-head" id="loginHead">Sign in to Tracksheet</div>
+      <div class="login-sub" id="loginSub">Enter your student ID and Codeforces handle. Your ID identifies your row — everyone on the team can see who's solved what.</div>
+
+      <div class="login-tabs">
+        <button class="tab-btn active" id="tabStudentBtn" onclick="switchLoginTab('student')">Student</button>
+        <button class="tab-btn" id="tabTeacherBtn" onclick="switchLoginTab('teacher')">Teacher (view only)</button>
+      </div>
+
+      <div id="studentFields">
+        <div class="field"><label>Student ID</label><input id="inStudentId" type="text" placeholder="e.g. C253101" autocomplete="off"></div>
+        <div class="field"><label>Full name</label><input id="inName" type="text" placeholder="e.g. Amir Foysal" autocomplete="off"></div>
+        <div class="field"><label>Codeforces handle</label><input id="inHandle" type="text" placeholder="e.g. tourist" autocomplete="off"></div>
+        <button class="login-btn" onclick="handleLogin()">Enter tracksheet</button>
+      </div>
+
+      <div id="teacherFields" class="hidden">
+        <div class="field"><label>Guest password</label><input id="inTeacherPass" type="password" placeholder="Password" autocomplete="off"></div>
+        <button class="login-btn teacher" onclick="handleTeacherLogin()">View leaderboard</button>
+      </div>
+
       <div class="login-error" id="loginError">Please fill in all three fields.</div>
     </div>
   </div>
@@ -150,7 +174,8 @@ footer.hint{ text-align:center; color:var(--text-faint); font-size:11px; margin-
     <div class="topbar">
       <div class="brand"><span class="dot"></span><span class="brand-text">CF TRACKSHEET <span>/ team log</span></span></div>
       <div class="user-chip">
-        <span><span class="rank-swatch" id="myRankSwatch"></span><span class="handle" id="myHandleLabel"></span></span>
+        <span id="studentChip"><span class="rank-swatch" id="myRankSwatch"></span><span class="handle" id="myHandleLabel"></span></span>
+        <span class="guest-badge hidden" id="guestBadge">Guest — view only</span>
         <button class="pill-btn" id="adminBtn" onclick="onAdminButton()">Admin</button>
         <button class="pill-btn" onclick="handleLogout()">Switch user</button>
       </div>
@@ -172,6 +197,7 @@ footer.hint{ text-align:center; color:var(--text-faint); font-size:11px; margin-
     </div>
 
     <div class="add-form hidden" id="addForm">
+      <div class="field"><label>Group / topic</label><input id="inProbGroup" type="text" placeholder="e.g. Array, String, DP"></div>
       <div class="field"><label>Problem name</label><input id="inProbName" type="text" placeholder="e.g. 4A - Watermelon"></div>
       <div class="field"><label>Codeforces link</label><input id="inProbLink" type="text" placeholder="https://codeforces.com/problemset/problem/4/A"></div>
       <button onclick="submitProblemForm()" id="addFormSubmitBtn">Add</button>
@@ -219,10 +245,14 @@ const firebaseConfig = {
 // ====== 2. SET YOUR ADMIN PASSWORD HERE ======
 const ADMIN_PASSWORD = "ibno123";
 
+// ====== 3. SET THE TEACHER / GUEST VIEW-ONLY PASSWORD HERE ======
+const TEACHER_PASSWORD = "jamilsir";
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 let me = null;
+let role = 'student'; // 'student' | 'teacher'
 let isAdmin = false;
 let problems = [];
 let students = [];
@@ -267,13 +297,27 @@ function startListeners(){
 }
 
 // ---- Login ----
+window.switchLoginTab = function(which){
+  const isStudent = which === 'student';
+  document.getElementById('tabStudentBtn').classList.toggle('active', isStudent);
+  document.getElementById('tabTeacherBtn').classList.toggle('active', !isStudent);
+  document.getElementById('studentFields').classList.toggle('hidden', !isStudent);
+  document.getElementById('teacherFields').classList.toggle('hidden', isStudent);
+  document.getElementById('loginError').style.display = 'none';
+  document.getElementById('loginHead').textContent = isStudent ? 'Sign in to Tracksheet' : 'Guest view access';
+  document.getElementById('loginSub').textContent = isStudent
+    ? "Enter your student ID and Codeforces handle. Your ID identifies your row — everyone on the team can see who's solved what."
+    : 'View-only access to the team leaderboard. No editing, no personal tracking.';
+};
+
 window.handleLogin = async function(){
   const studentId = document.getElementById('inStudentId').value.trim();
   const name = document.getElementById('inName').value.trim();
   const handle = document.getElementById('inHandle').value.trim();
   const err = document.getElementById('loginError');
-  if(!studentId || !name || !handle){ err.style.display='block'; return; }
+  if(!studentId || !name || !handle){ err.textContent = 'Please fill in all three fields.'; err.style.display='block'; return; }
   err.style.display='none';
+  role = 'student';
   me = { studentId, name, handle };
   try{
     await setDoc(doc(db,'students',studentId), { name, handle, lastSeen: serverTimestamp() }, { merge:true });
@@ -283,12 +327,25 @@ window.handleLogin = async function(){
   startListeners();
 };
 
+window.handleTeacherLogin = function(){
+  const val = document.getElementById('inTeacherPass').value;
+  const err = document.getElementById('loginError');
+  if(val !== TEACHER_PASSWORD){ err.textContent = 'Incorrect password.'; err.style.display='block'; return; }
+  err.style.display='none';
+  role = 'teacher';
+  me = { role: 'teacher' };
+  document.getElementById('loginView').classList.add('hidden');
+  document.getElementById('mainView').classList.remove('hidden');
+  startListeners();
+};
+
 window.handleLogout = function(){
-  me = null; isAdmin = false;
+  me = null; isAdmin = false; role = 'student';
   document.getElementById('mainView').classList.add('hidden');
   document.getElementById('loginView').classList.remove('hidden');
   document.getElementById('adminBtn').classList.remove('admin-on');
   document.getElementById('addToggleBtn').classList.add('hidden');
+  switchLoginTab('student');
 };
 
 // ---- Admin gate ----
@@ -322,6 +379,7 @@ window.submitAdminPassword = function(){
 // ---- Problem CRUD (admin only) ----
 window.toggleAddForm = function(){
   editingProblemId = null;
+  document.getElementById('inProbGroup').value = '';
   document.getElementById('inProbName').value = '';
   document.getElementById('inProbLink').value = '';
   document.getElementById('addFormSubmitBtn').textContent = 'Add';
@@ -329,15 +387,16 @@ window.toggleAddForm = function(){
 };
 window.submitProblemForm = async function(){
   if(!isAdmin) return;
+  const group = document.getElementById('inProbGroup').value.trim() || 'General';
   const name = document.getElementById('inProbName').value.trim();
   const link = document.getElementById('inProbLink').value.trim();
   if(!name || !link) return;
   try{
     if(editingProblemId){
-      await updateDoc(doc(db,'problems',editingProblemId), { name, link });
+      await updateDoc(doc(db,'problems',editingProblemId), { name, link, group });
     } else {
       const id = 'prob_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-      await setDoc(doc(db,'problems',id), { name, link, order: problems.length, createdAt: serverTimestamp() });
+      await setDoc(doc(db,'problems',id), { name, link, group, order: problems.length, createdAt: serverTimestamp() });
     }
   }catch(e){ console.error('problem save failed', e); alert('Could not save problem.'); }
   editingProblemId = null;
@@ -347,6 +406,7 @@ window.editProblem = function(id){
   const p = problems.find(x=>x.id===id);
   if(!p) return;
   editingProblemId = id;
+  document.getElementById('inProbGroup').value = p.group || '';
   document.getElementById('inProbName').value = p.name;
   document.getElementById('inProbLink').value = p.link;
   document.getElementById('addFormSubmitBtn').textContent = 'Save changes';
@@ -361,7 +421,7 @@ window.deleteProblem = async function(id){
 
 // ---- Status toggles ----
 window.setStatus = async function(problemId, status){
-  if(!me) return;
+  if(!me || role !== 'student') return;
   const current = statusByStudent[me.studentId] || {};
   current[problemId] = status;
   try{
@@ -369,44 +429,86 @@ window.setStatus = async function(problemId, status){
   }catch(e){ console.error('status write failed', e); }
 };
 
+// ---- Admin: remove a member ----
+window.removeMember = async function(studentId){
+  if(!isAdmin) return;
+  if(!confirm('Remove this member and their progress? This cannot be undone.')) return;
+  try{
+    await deleteDoc(doc(db,'students',studentId));
+    await deleteDoc(doc(db,'status',studentId));
+  }catch(e){ console.error('remove member failed', e); alert('Could not remove member.'); }
+};
+
 // ---- Render ----
 function render(){
   if(!me) return;
-  document.getElementById('myHandleLabel').textContent = me.handle;
-  const myStatus = statusByStudent[me.studentId] || {};
-  const myCounts = countsFor(myStatus);
-  document.getElementById('myRankSwatch').style.background = rankColor(myCounts.solved);
-  document.getElementById('statSolved').textContent = myCounts.solved;
-  document.getElementById('statAttempted').textContent = myCounts.attempted;
-  document.getElementById('statUnsolved').textContent = myCounts.unsolved;
-  const pct = problems.length ? Math.round((myCounts.solved/problems.length)*100) : 0;
-  document.getElementById('statPct').textContent = pct + '%';
-  document.getElementById('progressFill').style.width = pct + '%';
-  document.getElementById('problemCountLabel').textContent = '(' + problems.length + ')';
 
-  const tableEl = document.getElementById('problemTable');
-  if(problems.length === 0){
-    tableEl.innerHTML = `<div class="empty-state">No problems yet.${isAdmin ? ' Click <b>+ Add problem</b> to build the sheet.' : ' Ask an admin to add some.'}</div>`;
-  } else {
-    tableEl.innerHTML = problems.map((p,i)=>{
-      const v = myStatus[p.id] || 'unsolved';
-      return `
-        <div class="prow">
-          <div class="p-idx">${i+1}</div>
-          <div><a class="p-link" href="${escapeHtml(p.link)}" target="_blank" rel="noopener">${escapeHtml(p.name)}</a></div>
-          <div class="p-row-right">
-            <div class="verdicts">
-              <button class="v-btn solved ${v==='solved'?'active':''}" onclick="setStatus('${p.id}','solved')">SOLVED</button>
-              <button class="v-btn attempted ${v==='attempted'?'active':''}" onclick="setStatus('${p.id}','attempted')">ATTEMPTED</button>
-              <button class="v-btn unsolved ${v==='unsolved'?'active':''}" onclick="setStatus('${p.id}','unsolved')">UNSOLVED</button>
-            </div>
-            ${isAdmin ? `<div class="admin-actions">
-              <button class="icon-btn" onclick="editProblem('${p.id}')">Edit</button>
-              <button class="icon-btn danger" onclick="deleteProblem('${p.id}')">Delete</button>
-            </div>` : ''}
+  const isTeacher = role === 'teacher';
+  document.getElementById('studentChip').classList.toggle('hidden', isTeacher);
+  document.getElementById('guestBadge').classList.toggle('hidden', !isTeacher);
+  document.getElementById('adminBtn').classList.toggle('hidden', isTeacher);
+  document.querySelector('.stats-row').classList.toggle('hidden', isTeacher);
+  document.querySelector('.section-head').classList.toggle('hidden', isTeacher);
+  document.getElementById('addForm').classList.toggle('hidden', isTeacher || !isAdmin);
+  document.getElementById('problemTable').classList.toggle('hidden', isTeacher);
+
+  if(!isTeacher){
+    document.getElementById('myHandleLabel').textContent = me.handle;
+    const myStatus = statusByStudent[me.studentId] || {};
+    const myCounts = countsFor(myStatus);
+    document.getElementById('myRankSwatch').style.background = rankColor(myCounts.solved);
+    document.getElementById('statSolved').textContent = myCounts.solved;
+    document.getElementById('statAttempted').textContent = myCounts.attempted;
+    document.getElementById('statUnsolved').textContent = myCounts.unsolved;
+    const pct = problems.length ? Math.round((myCounts.solved/problems.length)*100) : 0;
+    document.getElementById('statPct').textContent = pct + '%';
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('problemCountLabel').textContent = '(' + problems.length + ')';
+
+    const tableEl = document.getElementById('problemTable');
+    if(problems.length === 0){
+      tableEl.innerHTML = `<div class="empty-state">No problems yet.${isAdmin ? ' Click <b>+ Add problem</b> to build the sheet.' : ' Ask an admin to add some.'}</div>`;
+    } else {
+      // group problems in first-seen order
+      const groupOrder = [];
+      const byGroup = {};
+      problems.forEach(p=>{
+        const g = p.group || 'General';
+        if(!byGroup[g]){ byGroup[g] = []; groupOrder.push(g); }
+        byGroup[g].push(p);
+      });
+
+      tableEl.innerHTML = groupOrder.map(g=>{
+        const items = byGroup[g];
+        const solvedInGroup = items.filter(p => myStatus[p.id] === 'solved').length;
+        const rowsHtml = items.map((p)=>{
+          const idx = problems.indexOf(p) + 1;
+          const v = myStatus[p.id] || 'unsolved';
+          return `
+            <div class="prow">
+              <div class="p-idx">${idx}</div>
+              <div><a class="p-link" href="${escapeHtml(p.link)}" target="_blank" rel="noopener">${escapeHtml(p.name)}</a></div>
+              <div class="p-row-right">
+                <div class="verdicts">
+                  <button class="v-btn solved ${v==='solved'?'active':''}" onclick="setStatus('${p.id}','solved')">SOLVED</button>
+                  <button class="v-btn attempted ${v==='attempted'?'active':''}" onclick="setStatus('${p.id}','attempted')">ATTEMPTED</button>
+                  <button class="v-btn unsolved ${v==='unsolved'?'active':''}" onclick="setStatus('${p.id}','unsolved')">UNSOLVED</button>
+                </div>
+                ${isAdmin ? `<div class="admin-actions">
+                  <button class="icon-btn" onclick="editProblem('${p.id}')">Edit</button>
+                  <button class="icon-btn danger" onclick="deleteProblem('${p.id}')">Delete</button>
+                </div>` : ''}
+              </div>
+            </div>`;
+        }).join('');
+        return `
+          <div class="group-header">
+            <span class="g-name">${escapeHtml(g)}</span>
+            <span class="g-progress">${solvedInGroup}/${items.length} solved</span>
           </div>
-        </div>`;
-    }).join('');
+          ${rowsHtml}`;
+      }).join('');
+    }
   }
 
   const rows = students.map(s=>{
@@ -422,7 +524,7 @@ function render(){
     html += rows.map((r,i)=>{
       const total = problems.length || 1;
       const pct = Math.round((r.solved/total)*100);
-      const isMe = r.studentId === me.studentId;
+      const isMe = !isTeacher && r.studentId === me.studentId;
       return `
         <div class="lb-row">
           <div class="lb-rank">${i+1}</div>
@@ -430,6 +532,7 @@ function render(){
             <span class="rank-swatch" style="background:${rankColor(r.solved)}"></span>
             ${escapeHtml(r.handle)}${isMe ? '<span class="you-tag">YOU</span>' : ''}
             <span class="lb-name">${escapeHtml(r.name)}</span>
+            ${isAdmin ? `<button class="lb-remove" onclick="removeMember('${r.studentId}')">Remove</button>` : ''}
           </div>
           <div class="lb-solved">${r.solved}</div>
           <div class="lb-attempted">${r.attempted}</div>
